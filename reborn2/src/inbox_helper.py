@@ -7,45 +7,45 @@ from dataclasses import dataclass
 
 REQUIRED = ["id", "sender", "subject", "body"]
 
-RULES: list[tuple[str, list[str]]] = [
-    ("withdrawal", ["withdraw", "drop out", "not interested", "quit", "stop"]),
-    ("technical_issue", ["error", "failed", "cannot", "can't", "login", "broken", "bug", "upload fail", "trouble", "access"]),
-    ("quest_status", ["quest", "submit", "submission", "deadline", "deliverable", "upload"]),
-    ("schedule", ["schedule", "interview", "call", "meet", "available", "reschedule", "slot"]),
-    ("salary", ["salary", "pay", "compensation", "offer", "ctc", "stipend"]),
-]
-
-DRAFTS = {
-    "quest_status": "Hi {sender}, thanks for checking — your Quest deadline is 5 days from assignment. Upload intent.md, code+README, logs, video link, and unlearned note. Reply here if stuck and we'll unblock. — Team",
-    "schedule": "Hi {sender}, happy to schedule — please share 2-3 slots (with timezone) and we'll confirm. — Team",
-    "salary": "Hi {sender}, comp is aligned post-Quest/Paid Test based on scope. Please share expectations and we'll discuss on HR call. — Team",
-    "technical_issue": "Hi {sender}, sorry for the trouble — please forward the exact error/screenshot + file size/link and we'll fix within a day. — Team",
-    "withdrawal": "Hi {sender}, noted — you're withdrawn, no further action. Reply if you want back in later. — Team",
-    "other": "Hi {sender}, thanks — a human will review and reply shortly. — Team",
-}
+from .grouping import Grouper
+from .drafting import Drafter
 
 @dataclass
 class Result:
     id: str
     sender: str
-    intent: str
+    email: str
+    intent: str  # primary label (first of labels)
+    labels: list
     confidence: str
     draft: str
+    placeholders: list = None
 
-def classify(subject: str, body: str) -> tuple[str, str]:
-    text = f"{subject} {body}".lower()
-    for intent, keywords in RULES:
-        hits = sum(1 for k in keywords if k in text)
-        if hits >= 2:
-            return intent, "high"
-        if hits == 1:
-            # check no higher-priority double-hit later? first single wins per order
-            # to keep deterministic, return on first single hit
-            return intent, "medium"
-    return "other", "low"
+def process(csv_path: str, grouper=None, drafter=None) -> list[Result]:
+    results, _ = run_pipeline(csv_path, grouper=grouper, drafter=drafter)
+    return results
 
-def process(csv_path: str) -> list[Result]:
+
+def run_pipeline(csv_path: str, grouper=None, drafter=None, safety=None):
+    """Full pipeline: safety gate -> grouping -> drafting.
+
+    Returns (results, quarantined). Quarantined messages skip grouping and
+    drafting entirely and go to a human.
+    """
+    from .grouping import OTHER
+    from .safety import SafetyGate
+    grouper = grouper or Grouper()
+    drafter = drafter or Drafter()  # templates when provider is None
+    safety = safety or SafetyGate()  # RuleDecide fallback when no key
+    cands = {}
+    try:
+        with open("data/candidates.csv", newline="", encoding="utf-8") as f:
+            for c in csv.DictReader(f):
+                cands[c["email"]] = c
+    except FileNotFoundError:
+        pass
     out: list[Result] = []
+    quarantined: list[dict] = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames is None:
@@ -56,35 +56,68 @@ def process(csv_path: str) -> list[Result]:
         for row in reader:
             if not any((v or "").strip() for v in row.values()):
                 continue
-            intent, conf = classify(row["subject"] or "", row["body"] or "")
-            draft = DRAFTS[intent].format(sender=(row["sender"] or "").strip() or "there")
-            out.append(Result(id=row["id"], sender=row["sender"], intent=intent, confidence=conf, draft=draft))
-    return out
+            sender = cands.get(row.get("email") or "", {"name": row["sender"]})
+            msg = {"subject": row["subject"] or "", "body": row["body"] or ""}
+            s = safety.check(msg, sender)
+            if s.quarantined:
+                quarantined.append({"id": row["id"], "sender": row["sender"],
+                                    "email": row.get("email") or "",
+                                    "reasons": s.reasons})
+                continue
+            g = grouper.label(msg, sender)
+            primary = g.primary
+            conf = "high" if primary != OTHER and g.scores.get(primary, 0) >= 0.8 else (
+                "medium" if primary != OTHER else "low")
+            d = drafter.draft(msg, g.labels, sender)
+            out.append(Result(id=row["id"], sender=row["sender"], email=(row.get("email") or ""),
+                              intent=primary, labels=g.labels, confidence=conf,
+                              draft=d.draft, placeholders=d.placeholders))
+    return out, quarantined
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Inbox helper: group + draft, human reviews.")
     ap.add_argument("--csv", required=True)
     ap.add_argument("--output", default=None)
+    ap.add_argument("--live", action="store_true",
+                    help="use live decision + chat models (needs OPENROUTER_API_KEY)")
     args = ap.parse_args(argv)
+    grouper = drafter = safety = None
+    if args.live:
+        from .harness.decide import DecideProvider
+        from .harness.chat import ChatProvider
+        from .grouping import Grouper
+        from .drafting import Drafter
+        from .safety import SafetyGate
+        grouper, drafter = Grouper(DecideProvider()), Drafter(ChatProvider())
+        safety = SafetyGate(DecideProvider())
     try:
-        results = process(args.csv)
-    except (FileNotFoundError, ValueError) as e:
+        results, quarantined = run_pipeline(args.csv, grouper=grouper,
+                                            drafter=drafter, safety=safety)
+    except (FileNotFoundError, ValueError, RuntimeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+    if quarantined:
+        print(f"\n!! QUARANTINED ({len(quarantined)}) — human review, no draft written:")
+        for q in quarantined:
+            print(f"[{q['id']}] {q['sender']} <{q['email']}>")
+            for r in q["reasons"]:
+                print(f"    - {r}")
     groups: dict[str, list[Result]] = {}
     for r in results:
         groups.setdefault(r.intent, []).append(r)
     for intent in sorted(groups):
         print(f"\n== {intent} ({len(groups[intent])}) ==")
         for r in groups[intent]:
-            print(f"[{r.id}] {r.sender} ({r.confidence}): {r.draft}")
+            print(f"[{r.id}] {r.sender} <{r.email}> ({r.confidence}) [{';'.join(r.labels)}]: {r.draft}")
     print(f"\nGrouped {len(results)} messages into {len(groups)} intents. All drafts need human review before send.")
     if args.output:
         with open(args.output, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["id", "sender", "intent", "confidence", "draft", "needs_review"])
+            w.writerow(["id", "sender", "email", "intent", "labels", "confidence", "draft",
+                        "placeholders", "needs_review"])
             for r in results:
-                w.writerow([r.id, r.sender, r.intent, r.confidence, r.draft, "true"])
+                w.writerow([r.id, r.sender, r.email, r.intent, ";".join(r.labels),
+                            r.confidence, r.draft, ";".join(r.placeholders or []), "true"])
     return 0
 
 if __name__ == "__main__":
