@@ -1,7 +1,4 @@
-"""Model harness package — prompt → run → verify → log loop."""
-from .harness import Harness, HarnessResult
-from .providers import RuleProvider
-from .openrouter import OpenRouterProvider
-from . import files
+"""Decision-model interface for the pipeline — typed answers, no text."""
+from .decide import DecideProvider, RuleDecide
 
-__all__ = ["Harness", "HarnessResult", "RuleProvider", "OpenRouterProvider", "files"]
+__all__ = ["DecideProvider", "RuleDecide"]
