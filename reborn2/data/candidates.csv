@@ -1,0 +1,31 @@
+candidate_id,name,email,role_applied,stage,last_stage_change,interview_date,interview_time,recruiter
+101,Amina Yusuf,amina.yusuf13@proton.me,Backend,Quest,2026-10-09,,,Sara
+102,John Mensah,john.mensah14@icloud.com,Frontend,Screen,2026-10-05,2026-10-16,10:00 GMT,John
+103,Priya Sharma,priya.sharma15@gmail.com,Backend,Screen,2026-10-08,,,Lea
+104,Carlos Ruiz,carlos.ruiz16@yahoo.com,AI Engineer,Quest,2026-10-02,,,Mike
+105,Fatima Ali,fatima.ali17@outlook.com,Backend,Withdrawn,2026-10-10,,,Sara
+106,David Okafor,david.okafor18@proton.me,Frontend,Rejected,2026-10-06,,,Lea
+107,Linh Nguyen,linh.nguyen19@icloud.com,Backend,HR,2026-10-08,2026-10-17,09:30 GMT,Mike
+108,Kofi Boateng,kofi.boateng20@gmail.com,Frontend,Paid Test,2026-10-06,,,Lea
+109,Maria Santos,maria.santos21@yahoo.com,Frontend,Applied,2026-10-11,,,Sara
+110,Chen Wei,chen.wei22@outlook.com,Backend,Quest,2026-10-07,,,Lea
+111,Ngozi Eze,ngozi.eze23@proton.me,AI Engineer,Screen,2026-10-04,2026-10-15,14:00 GMT,John
+112,Omar Farouk,omar.farouk24@icloud.com,Backend,Screen,2026-10-03,2026-10-18,11:00 GMT,Sara
+113,Sara Hossain,sara.hossain25@gmail.com,Backend,Applied,2026-10-10,,,Sara
+114,Rakib Hasan,rakib.hasan26@yahoo.com,Backend,Applied,2026-10-11,,,Sara
+115,Anika Chowdhury,anika.chowdhury27@outlook.com,Frontend,Offer,2026-10-09,,,Mike
+116,Vikram Patel,vikram.patel28@proton.me,Backend,HR,2026-10-07,2026-10-16,13:00 GMT,Lea
+117,Grace Mwangi,grace.mwangi29@icloud.com,Backend,Rejected,2026-09-28,,,Sara
+118,Diego Torres,diego.torres30@gmail.com,AI Engineer,Offer,2026-10-08,,,Mike
+119,Samuel Adeyemi,samuel.adeyemi31@yahoo.com,Backend,Withdrawn,2026-10-09,,,John
+120,Hannah Kim,hannah.kim32@outlook.com,Frontend,Rejected,2026-10-05,,,Lea
+121,Tanvir Ahmed,tanvir.ahmed33@proton.me,Backend,Screen,2026-10-06,2026-10-21,10:30 GMT,John
+122,Julia Novak,julia.novak34@icloud.com,Frontend,HR,2026-10-09,,,Mike
+123,Peter Obi,peter.obi35@gmail.com,Backend,HR,2026-10-09,,,Sara
+124,Nadia Rahman,nadia.rahman36@yahoo.com,Backend,Offer,2026-10-07,,,Mike
+125,Elias Tesfaye,elias.tesfaye37@outlook.com,AI Engineer,Applied,2026-10-12,,,John
+126,Sofia Reyes,sofia.reyes38@proton.me,Frontend,Screen,2026-10-10,2026-10-19,15:00 GMT,Lea
+127,Arjun Mehta,arjun.mehta39@icloud.com,Backend,Screen,2026-10-11,2026-10-15,09:00 GMT,John
+128,Layla Ibrahim,layla.ibrahim40@gmail.com,Backend,Offer,2026-10-10,,,Sara
+129,Tomasz Kowalski,tomasz.kowalski41@yahoo.com,AI Engineer,Applied,2026-10-12,,,Mike
+130,Emily Zhang,emily.zhang42@outlook.com,Frontend,Screen,2026-10-11,2026-10-17,16:00 GMT,Lea
