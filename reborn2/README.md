@@ -26,3 +26,25 @@ python -m pytest -q
 - `data/candidate_emails.csv` — source 30-email set (same senders/emails as candidates)
 - `tests/` — inbox_helper, message↔candidate consistency, safety-gate tests
 - `intent.md`, `Final directive.md`, `logs/`, `docs/unlearned.md`
+
+## Web page (review UI)
+
+FastAPI backend (`api/`) plus a small React page (`web/`). Upload a CSV, review the
+groups, edit each draft, then approve, reject, or send it. Send is a stub: it records
+the reply in `outbox/sent.csv` and sends no email (replace `deliver()` in `api/service.py`).
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --reload          # API on :8000
+
+cd web && npm install
+npm run dev                            # page on http://localhost:5173 (proxies /api)
+# or: npm run build, then open http://localhost:8000 (FastAPI serves web/dist)
+```
+
+- Offline by default (rule-based decisions, template drafts). Set `OPENROUTER_API_KEY`
+  before starting the server to use the live decision and chat models.
+- Approve is blocked while a draft is empty or still has `[placeholders]`. Editing an
+  approved draft cancels the approval.
+- One in-memory batch for one user: restarting the server clears it.
+- API tests: `pip install -r requirements-dev.txt && python -m pytest -q`
