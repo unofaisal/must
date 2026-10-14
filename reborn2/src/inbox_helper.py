@@ -4,11 +4,15 @@ import argparse
 import csv
 import sys
 from dataclasses import dataclass
+from pathlib import Path
+
+from .grouping import Grouper, OTHER
+from .drafting import Drafter
+from .safety import SafetyGate
 
 REQUIRED = ["id", "sender", "subject", "body"]
+CANDIDATES_PATH = Path(__file__).resolve().parent.parent / "data" / "candidates.csv"
 
-from .grouping import Grouper
-from .drafting import Drafter
 
 @dataclass
 class Result:
@@ -20,10 +24,62 @@ class Result:
     confidence: str
     draft: str
     placeholders: list = None
+    subject: str = ""
+    body: str = ""
+    draft_source: str = ""  # "template", "template (fallback)", or the model provider name
+
 
 def process(csv_path: str, grouper=None, drafter=None) -> list[Result]:
     results, _ = run_pipeline(csv_path, grouper=grouper, drafter=drafter)
     return results
+
+
+def load_candidates(path=CANDIDATES_PATH) -> dict:
+    """Candidate records keyed by email. Missing file = no records."""
+    cands = {}
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            for c in csv.DictReader(f):
+                cands[c["email"]] = c
+    except FileNotFoundError:
+        pass
+    return cands
+
+
+def read_rows(f) -> list[dict]:
+    """Validate the header and return the non-blank rows of a message CSV."""
+    reader = csv.DictReader(f)
+    if reader.fieldnames is None:
+        raise ValueError("empty CSV")
+    missing = [c for c in REQUIRED if c not in reader.fieldnames]
+    if missing:
+        raise ValueError(f"missing columns: {', '.join(missing)}")
+    return [row for row in reader
+            if any((v or "").strip() for v in row.values() if isinstance(v, str))]
+
+
+def process_row(row: dict, cands: dict, grouper, drafter, safety):
+    """One message through safety -> grouping -> drafting.
+
+    Returns (Result, None), or (None, quarantine_dict) when the safety gate
+    stops it. Quarantined messages skip grouping and drafting entirely.
+    """
+    sender = cands.get(row.get("email") or "", {"name": row["sender"] or ""})
+    msg = {"subject": row["subject"] or "", "body": row["body"] or ""}
+    s = safety.check(msg, sender)
+    if s.quarantined:
+        return None, {"id": row["id"] or "", "sender": row["sender"] or "",
+                      "email": row.get("email") or "", "subject": msg["subject"],
+                      "body": msg["body"], "reasons": s.reasons}
+    g = grouper.label(msg, sender)
+    primary = g.primary
+    conf = "high" if primary != OTHER and g.scores.get(primary, 0) >= 0.8 else (
+        "medium" if primary != OTHER else "low")
+    d = drafter.draft(msg, g.labels, sender)
+    return Result(id=row["id"] or "", sender=row["sender"] or "", email=row.get("email") or "",
+                  intent=primary, labels=g.labels, confidence=conf,
+                  draft=d.draft, placeholders=d.placeholders,
+                  subject=msg["subject"], body=msg["body"], draft_source=d.provider), None
 
 
 def run_pipeline(csv_path: str, grouper=None, drafter=None, safety=None):
@@ -32,47 +88,22 @@ def run_pipeline(csv_path: str, grouper=None, drafter=None, safety=None):
     Returns (results, quarantined). Quarantined messages skip grouping and
     drafting entirely and go to a human.
     """
-    from .grouping import OTHER
-    from .safety import SafetyGate
     grouper = grouper or Grouper()
     drafter = drafter or Drafter()  # templates when provider is None
     safety = safety or SafetyGate()  # RuleDecide fallback when no key
-    cands = {}
-    try:
-        with open("data/candidates.csv", newline="", encoding="utf-8") as f:
-            for c in csv.DictReader(f):
-                cands[c["email"]] = c
-    except FileNotFoundError:
-        pass
+    cands = load_candidates()
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        rows = read_rows(f)
     out: list[Result] = []
     quarantined: list[dict] = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        if reader.fieldnames is None:
-            raise ValueError("empty CSV")
-        missing = [c for c in REQUIRED if c not in reader.fieldnames]
-        if missing:
-            raise ValueError(f"missing columns: {', '.join(missing)}")
-        for row in reader:
-            if not any((v or "").strip() for v in row.values()):
-                continue
-            sender = cands.get(row.get("email") or "", {"name": row["sender"]})
-            msg = {"subject": row["subject"] or "", "body": row["body"] or ""}
-            s = safety.check(msg, sender)
-            if s.quarantined:
-                quarantined.append({"id": row["id"], "sender": row["sender"],
-                                    "email": row.get("email") or "",
-                                    "reasons": s.reasons})
-                continue
-            g = grouper.label(msg, sender)
-            primary = g.primary
-            conf = "high" if primary != OTHER and g.scores.get(primary, 0) >= 0.8 else (
-                "medium" if primary != OTHER else "low")
-            d = drafter.draft(msg, g.labels, sender)
-            out.append(Result(id=row["id"], sender=row["sender"], email=(row.get("email") or ""),
-                              intent=primary, labels=g.labels, confidence=conf,
-                              draft=d.draft, placeholders=d.placeholders))
+    for row in rows:
+        result, quarantine = process_row(row, cands, grouper, drafter, safety)
+        if quarantine:
+            quarantined.append(quarantine)
+        else:
+            out.append(result)
     return out, quarantined
+
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Inbox helper: group + draft, human reviews.")
@@ -85,9 +116,6 @@ def main(argv=None) -> int:
     if args.live:
         from .harness.decide import DecideProvider
         from .harness.chat import ChatProvider
-        from .grouping import Grouper
-        from .drafting import Drafter
-        from .safety import SafetyGate
         grouper, drafter = Grouper(DecideProvider()), Drafter(ChatProvider())
         safety = SafetyGate(DecideProvider())
     try:
