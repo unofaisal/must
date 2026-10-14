@@ -53,3 +53,20 @@ def test_chat_payload_shape():
     payload = prov.build_payload("hello")
     assert payload == {"model": "x/y", "messages": [{"role": "user", "content": "hello"}], "reasoning": {"enabled": False}}
     assert DEFAULT_MODEL == "nvidia/nemotron-3.5-lightning:free"
+
+
+def test_new_groups_have_templates():
+    for label in ("technical_issue", "deadline_extension",
+                  "submission_or_documents", "thanks_or_ack"):
+        assert label in DRAFTS
+        assert "Linh Nguyen" in Drafter().draft(MSG, [label], SENDER).draft
+
+
+def test_provider_failure_falls_back_to_template():
+    class Boom:
+        name = "boom"
+        def complete(self, prompt):
+            raise RuntimeError("503")
+    r = Drafter(Boom()).draft(MSG, ["reschedule"], SENDER)
+    assert r.provider == "template (fallback)" and "Linh Nguyen" in r.draft
+    assert Drafter(StubChat("   ")).draft(MSG, ["reschedule"], SENDER).provider == "template (fallback)"

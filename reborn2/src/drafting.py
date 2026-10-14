@@ -23,6 +23,10 @@ DRAFTS = {
     "pay_or_contract": "Hi {sender}, comp is aligned post-Quest/Paid Test based on scope. Please share expectations and we'll discuss on HR call. — Team",
     "withdrawal": "Hi {sender}, noted — you're withdrawn, no further action. Reply if you want back in later. — Team",
     "feedback": "Hi {sender}, thanks for asking — a recruiter will share brief feedback on your last stage within a few days. — Team",
+    "technical_issue": "Hi {sender}, sorry for the trouble — please send the exact error message or a screenshot and we will look into it. — Team",
+    "deadline_extension": "Hi {sender}, thanks for letting us know — a recruiter will confirm whether the deadline can move and reply here. — Team",
+    "submission_or_documents": "Hi {sender}, thanks for sending this — a recruiter will confirm that we have received it. — Team",
+    "thanks_or_ack": "Hi {sender}, thank you for your message. — Team",
     "other": "Hi {sender}, thanks — a human will review and reply shortly. — Team",
 }
 
@@ -58,18 +62,30 @@ class DraftResult:
 
 
 class Drafter:
-    """Provider-agnostic: any object with `complete(prompt)`. None -> templates."""
+    """Provider-agnostic: any object with `complete(prompt)`. None -> templates.
+
+    If the provider fails or returns nothing, the draft falls back to the
+    template for that label instead of crashing the whole run.
+    """
 
     def __init__(self, provider=None):
         self.provider = provider
 
+    @staticmethod
+    def _template(name: str, labels: list[str], source: str) -> DraftResult:
+        primary = labels[0] if labels else "other"
+        return DraftResult(draft=DRAFTS.get(primary, DRAFTS["other"]).format(sender=name),
+                           placeholders=[], provider=source)
+
     def draft(self, message: dict, labels: list[str], sender: dict) -> DraftResult:
         name = (sender.get("name", "") or "").strip() or "there"
         if self.provider is None:  # offline path: templates by design
-            primary = labels[0] if labels else "other"
-            return DraftResult(draft=DRAFTS.get(primary, DRAFTS["other"]).format(sender=name),
-                               placeholders=[], provider="template")
-        prompt = build_prompt(message, labels, sender)
-        text = self.provider.complete(prompt)
+            return self._template(name, labels, "template")
+        try:
+            text = (self.provider.complete(build_prompt(message, labels, sender)) or "").strip()
+        except Exception:
+            text = ""
+        if not text:  # model failed or said nothing: never leave the human with a blank
+            return self._template(name, labels, "template (fallback)")
         return DraftResult(draft=text, placeholders=find_placeholders(text),
                            provider=getattr(self.provider, "name", "?"))
