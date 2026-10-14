@@ -69,3 +69,19 @@ def test_rule_fallback_end_to_end():
     g = Grouper(RuleDecide())
     assert "withdrawal" in g.label({"subject": "x", "body": "I quit, withdraw me"}, SENDER).labels
     assert g.label({"subject": "hi", "body": "just saying hello"}, SENDER).labels == [OTHER]
+
+
+def test_new_groups_can_fire_and_are_sorted_by_score():
+    g = Grouper(StubDecide({"technical_issue": 0.9, "deadline_extension": 0.7,
+                            "thanks_or_ack": 0.6, "other": 0.99}))
+    r = g.label(MSG, SENDER)
+    assert r.labels == ["technical_issue", "deadline_extension", "thanks_or_ack"]
+    assert r.primary == "technical_issue"
+    assert set(INTENTS) | {OTHER} == set(GROUP_SPECS)  # every question asked is also read
+
+
+def test_offline_rules_cover_technical_and_extension():
+    from src.harness.decide import RuleDecide
+    g = Grouper(RuleDecide())
+    assert g.label({"subject": "x", "body": "login failed, cannot access quest page"}, SENDER).primary == "technical_issue"
+    assert "deadline_extension" in g.label({"subject": "x", "body": "could I get an extension?"}, SENDER).labels

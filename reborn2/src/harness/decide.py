@@ -115,6 +115,14 @@ class RuleDecide:
                             "sponsor", "part-time", "negotiat"),
         "withdrawal": ("withdraw", "drop out", "not interested", "quit", "no longer"),
         "feedback": ("feedback", "reject", "reapply", "improve", "why was"),
+        "technical_issue": ("login", "log in", "cannot access", "can't access", "error",
+                            "failed", "broken", "not loading", "won't open",
+                            "cannot upload", "can't upload"),
+        "deadline_extension": ("extension", "extend", "more time", "move the deadline",
+                               "push the deadline", "postpone the deadline"),
+        "submission_or_documents": ("attached", "attachment", "my cv", "resume",
+                                    "portfolio", "did you receive", "received my",
+                                    "confirm receipt"),
     }
 
     _BANK = {**_SAFETY, **_GROUP}

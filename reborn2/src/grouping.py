@@ -1,7 +1,8 @@
 """Pipeline stage 2: grouping. One noul per intent — a message can carry several.
 
-Six intent checks; if none fires, the message is `other` — so every message
-always ends up with at least one high label. No quarantine path here:
+Ten intent checks; if none fires, the message is `other` — so every message
+always ends up with at least one high label. Labels are ordered by score, so
+`primary` is the strongest one. No quarantine path here:
 grouping routes, it never blocks (safety already ran in stage 1).
 
 Provider-agnostic: any object with `ask(state, questions)`. Live path is
@@ -16,7 +17,9 @@ from .harness.decide import RuleDecide
 GROUP_THRESHOLD = 0.5  # routing, not blocking — docs' default probe gate
 
 INTENTS = ("status_update", "reschedule", "hiring_process",
-           "pay_or_contract", "withdrawal", "feedback")
+           "pay_or_contract", "withdrawal", "feedback",
+           "technical_issue", "deadline_extension",
+           "submission_or_documents", "thanks_or_ack")
 OTHER = "other"
 
 GROUP_SPECS: dict[str, tuple[str, str, str]] = {
@@ -133,7 +136,8 @@ class Grouper:
         except Exception:
             answers = self._fallback.ask(state, self.build_questions())  # never labelless
         scores = self._scores(answers)
-        labels = [qid for qid in INTENTS if scores[qid] >= self.threshold]
+        labels = sorted((qid for qid in INTENTS if scores[qid] >= self.threshold),
+                        key=lambda qid: -scores[qid])  # stable: ties keep INTENTS order
         if not labels:
             labels = [OTHER]
             scores[OTHER] = 1.0
