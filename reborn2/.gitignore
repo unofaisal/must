@@ -1,6 +1,5 @@
-__pycache__/
-.pytest_cache/
-node_modules/
-web/dist/
+data/gmail.json
+data/gmail_token.json
+data/settings.json
 outbox/
-.env
+__pycache__/

@@ -58,24 +58,48 @@ def read_rows(f) -> list[dict]:
             if any((v or "").strip() for v in row.values() if isinstance(v, str))]
 
 
-def process_row(row: dict, cands: dict, grouper, drafter, safety):
+def _emit(on_stage, stage: str, state: str, detail: dict | None = None) -> None:
+    if on_stage:
+        on_stage(stage, state, detail or {})
+
+
+def process_row(row: dict, cands: dict, grouper, drafter, safety, on_stage=None):
     """One message through safety -> grouping -> drafting.
 
     Returns (Result, None), or (None, quarantine_dict) when the safety gate
     stops it. Quarantined messages skip grouping and drafting entirely.
+
+    `on_stage(stage, state, detail)` is optional. It is called as each stage
+    starts ("running"), finishes ("done", with the scores) or is bypassed
+    ("skipped"), so a UI can show the run live. The CLI doesn't use it.
     """
     sender = cands.get(row.get("email") or "", {"name": row["sender"] or ""})
     msg = {"subject": row["subject"] or "", "body": row["body"] or ""}
+
+    _emit(on_stage, "safety", "running")
     s = safety.check(msg, sender)
+    _emit(on_stage, "safety", "done", {
+        "flagged": s.quarantined, "flags": s.flags, "threshold": s.threshold,
+        "reasons": s.reasons, "provider": s.provider})
     if s.quarantined:
+        _emit(on_stage, "grouping", "skipped")
+        _emit(on_stage, "drafting", "skipped")
         return None, {"id": row["id"] or "", "sender": row["sender"] or "",
                       "email": row.get("email") or "", "subject": msg["subject"],
                       "body": msg["body"], "reasons": s.reasons}
+
+    _emit(on_stage, "grouping", "running")
     g = grouper.label(msg, sender)
+    _emit(on_stage, "grouping", "done", {
+        "labels": g.labels, "scores": g.scores,
+        "threshold": getattr(grouper, "threshold", None), "provider": g.provider})
     primary = g.primary
     conf = "high" if primary != OTHER and g.scores.get(primary, 0) >= 0.8 else (
         "medium" if primary != OTHER else "low")
+
+    _emit(on_stage, "drafting", "running")
     d = drafter.draft(msg, g.labels, sender)
+    _emit(on_stage, "drafting", "done", {"source": d.provider, "placeholders": d.placeholders})
     return Result(id=row["id"] or "", sender=row["sender"] or "", email=row.get("email") or "",
                   intent=primary, labels=g.labels, confidence=conf,
                   draft=d.draft, placeholders=d.placeholders,

@@ -31,9 +31,10 @@ DRAFTS = {
 }
 
 
-def build_prompt(message: dict, labels: list[str], sender: dict) -> str:
+def build_prompt(message: dict, labels: list[str], sender: dict,
+                 custom_prompt: str = "") -> str:
     name = sender.get("name", "the candidate")
-    return (
+    base = (
         "You are drafting a recruiter reply to a job candidate. "
         "Write a short reply (under 120 words), friendly and professional.\n"
         f"Candidate: {name} ({sender.get('email', 'no email')}), "
@@ -48,6 +49,10 @@ def build_prompt(message: dict, labels: list[str], sender: dict) -> str:
         "terms, decisions, or names of people. When in doubt, use a [placeholder].\n"
         "Draft only the reply body, no explanations."
     )
+    extra = (custom_prompt or "").strip()
+    if extra:
+        return base + "\n\nAdditional instructions from the team:\n" + extra
+    return base
 
 
 def find_placeholders(draft: str) -> list[str]:
@@ -68,8 +73,9 @@ class Drafter:
     template for that label instead of crashing the whole run.
     """
 
-    def __init__(self, provider=None):
+    def __init__(self, provider=None, custom_prompt: str = ""):
         self.provider = provider
+        self.custom_prompt = custom_prompt or ""
 
     @staticmethod
     def _template(name: str, labels: list[str], source: str) -> DraftResult:
@@ -82,7 +88,8 @@ class Drafter:
         if self.provider is None:  # offline path: templates by design
             return self._template(name, labels, "template")
         try:
-            text = (self.provider.complete(build_prompt(message, labels, sender)) or "").strip()
+            prompt = build_prompt(message, labels, sender, self.custom_prompt)
+            text = (self.provider.complete(prompt) or "").strip()
         except Exception:
             text = ""
         if not text:  # model failed or said nothing: never leave the human with a blank
