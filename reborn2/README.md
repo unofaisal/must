@@ -1,6 +1,11 @@
 # reborn2 — Inbox Helper (Quest Option A)
 
-Groups candidate messages by intent, drafts short replies. Human reviews all.
+This is the real project for the Quest submission. The older re_born directory is a prototype/reference only; the actual code, UI, tests, and submission artifacts live in this reborn2 folder.
+
+This project takes a pile of candidate messages, classifies each one by intent, drafts a short reply, and leaves every decision for a human reviewer before anything is sent.
+
+The repository includes the rule-based classifier, review pipeline, web UI, and Gmail
+connector used for a real inbox workflow.
 
 ## Run
 ```bash
