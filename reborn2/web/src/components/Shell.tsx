@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from "react";
 import { Link, Navigate, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Download, FileUp, Mail, History as HistoryIcon, Home as HomeIcon, ListChecks, Settings as Cog, Workflow, X } from "lucide-react";
-import { ActionsCtx, type Actions } from "@/lib/actions";
-import { EXPORT_URL } from "@/lib/api";
-import { isOpen } from "@/lib/groups";
-import { useStore } from "@/lib/store";
-import type { GmailFetchParams } from "@/lib/types";
+import { ActionsCtx, type Actions } from "../lib/actions";
+import { EXPORT_URL } from "../lib/api";
+import { isOpen } from "../lib/groups";
+import { useStore } from "../lib/store";
+import type { GmailFetchParams } from "../lib/types";
 import { GmailFetchModal } from "./GmailFetchForm";
 import { SettingsSheet } from "./Settings";
 

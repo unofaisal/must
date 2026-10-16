@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Mail, X } from "lucide-react";
-import { getGmail } from "@/lib/api";
-import type { GmailFetchParams, GmailStatus } from "@/lib/types";
+import { getGmail } from "../lib/api";
+import type { GmailFetchParams, GmailStatus } from "../lib/types";
 
 const fieldCls = "w-full rounded-md border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-copper";
 

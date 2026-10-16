@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { disconnectGmail, getGmail, GMAIL_CONNECT_URL, putGmail, testGmail } from "@/lib/api";
-import { useStore } from "@/lib/store";
-import type { GmailConfigPatch, GmailStatus, GmailTest } from "@/lib/types";
+import { disconnectGmail, getGmail, GMAIL_CONNECT_URL, putGmail, testGmail } from "../lib/api";
+import { useStore } from "../lib/store";
+import type { GmailConfigPatch, GmailStatus, GmailTest } from "../lib/types";
 
 const inputCls = "w-full rounded-md border border-line bg-ink px-3 py-2.5 text-sm outline-none focus:border-copper";
 

@@ -1,9 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { SAFETY_QUESTIONS, STAGES, fmtElapsed, groupName, isOpen, sourceLabel } from "@/lib/groups";
-import { useStore } from "@/lib/store";
-import type { Item } from "@/lib/types";
+import { SAFETY_QUESTIONS, STAGES, fmtElapsed, groupName, isOpen, sourceLabel } from "../lib/groups";
+import { useStore } from "../lib/store";
+import type { Item } from "../lib/types";
 import { ScoreBar, StageCell } from "./parts";
 
 const FEED_COLS = "grid-cols-[2.25rem_minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]";

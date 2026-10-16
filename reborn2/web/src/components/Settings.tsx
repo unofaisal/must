@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { checkProviders, getSettings, putSettings } from "@/lib/api";
-import type { CheckResult, SettingsPatch } from "@/lib/types";
+import { checkProviders, getSettings, putSettings } from "../lib/api";
+import type { CheckResult, SettingsPatch } from "../lib/types";
 import { GmailPanel } from "./GmailPanel";
 
 const CHAT_PRESETS = [

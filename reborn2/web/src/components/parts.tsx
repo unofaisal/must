@@ -1,6 +1,6 @@
 import { Check, Flag } from "lucide-react";
-import { fmtMs, groupName, sourceLabel } from "@/lib/groups";
-import type { Item, StageKey } from "@/lib/types";
+import { fmtMs, groupName, sourceLabel } from "../lib/groups";
+import type { Item, StageKey } from "../lib/types";
 
 /** One stage's outcome for one email: waiting, working, skipped, or the result. */
 export function StageCell({ stageKey, item }: { stageKey: StageKey; item: Item }) {

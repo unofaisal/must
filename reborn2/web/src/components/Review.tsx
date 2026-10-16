@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { Check, Mail, Send } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { patchItem, sendItem } from "@/lib/api";
-import { GROUPS, groupName, groupOf, isOpen, missingPlaceholders, sourceLabel } from "@/lib/groups";
-import { MAILTO_SAFE_LENGTH, mailtoUrl } from "@/lib/mail";
-import { useStore } from "@/lib/store";
-import type { Item, Status } from "@/lib/types";
+import { patchItem, sendItem } from "../lib/api";
+import { GROUPS, groupName, groupOf, isOpen, missingPlaceholders, sourceLabel } from "../lib/groups";
+import { MAILTO_SAFE_LENGTH, mailtoUrl } from "../lib/mail";
+import { useStore } from "../lib/store";
+import type { Item, Status } from "../lib/types";
 
 type TabKey = "open" | "sent" | "rejected" | "all";
 const TABS: { key: TabKey; label: string; match: (i: Item) => boolean }[] = [

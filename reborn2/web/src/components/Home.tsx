@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Clock3, FileUp, Layers, Mail, PenLine, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
-import { useActions } from "@/lib/actions";
-import { getGmail } from "@/lib/api";
-import { fmtDate } from "@/lib/groups";
-import { useStore } from "@/lib/store";
-import type { GmailStatus } from "@/lib/types";
+import { useActions } from "../lib/actions";
+import { getGmail } from "../lib/api";
+import { fmtDate } from "../lib/groups";
+import { useStore } from "../lib/store";
+import type { GmailStatus } from "../lib/types";
 import { ConnectedBadge, GmailFetchForm } from "./GmailFetchForm";
 import { BatchRow } from "./History";
 
