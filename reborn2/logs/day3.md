@@ -10,5 +10,3 @@ The rest of the day was about making it usable by someone who isn't me:
 - A first React screen for reviewing, written in plain JavaScript.
 
 The model ran the tests after each change and fixed its own failures before I looked.
-
-What broke: nothing dramatic, but I replaced this JavaScript screen the next day and the old files are still sitting in the project.
