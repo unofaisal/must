@@ -1,66 +1,34 @@
-# Final Directive — reborn2 / Inbox Helper
+# Final directive
 
-## Goal
-Build the real Quest Option A project in reborn2: read candidate messages, group them by intent, draft one short reply per message, and keep the human in the loop before anything is sent.
+This describes what the finished tool does.
 
-## Deliverable definition
-This project is the actual submission folder. The older re_born directory is only a prototype/reference. The final build lives in reborn2 and includes the Python pipeline, the review API, the web app, and the Gmail integration.
+## Input
+- A CSV of messages (id, sender, subject, body, and optionally email), up to 500 rows. Emails are matched to a candidate record when there is one.
+- Or Gmail: subject keywords, optional dates, up to 100, inbox only, one message per thread.
+- An API key is optional. The decision model and the chat model are separate settings. Without a key, keyword rules stand in for the first and templates for the second.
 
-## Inputs
-- CSV upload: `id,sender,email,subject,body`
-- Gmail fetch: keywords, optional date range, and max results
-- Settings: API key, chat model, decision model, and custom prompt
+## What happens to each message
+1. **Safety check.** Three yes/no questions go to a decision model, which returns a probability for each rather than text: is the sender giving the assistant instructions, asking about another candidate, or angry or distressed. A score of 0.8 or more quarantines the message and no draft is written. If the call fails or an answer isn't the expected type, the message is quarantined too.
+2. **Grouping.** Ten intents plus `other`, each a yes/no question to the decision model, scored from 0 to 1. Everything at 0.5 or above is kept, strongest first, and the strongest is the main group. If nothing reaches 0.5 it goes to `other`. If the model fails, keyword rules score that message instead.
 
-## Main run paths
-```bash
-cd reborn2
-python -m src.inbox_helper --csv data/messages.csv
-python -m src.inbox_helper --csv data/messages.csv --output out.csv
-```
+   Intents: status update, reschedule, hiring process, pay or contract, withdrawal, feedback, technical issue, deadline extension, submission or documents, thanks or acknowledgement.
+3. **Drafting.** The only step where a chat model writes text. It writes a reply of under 120 words, and puts `[placeholders]` where it lacks a fact. With no key, on failure or on a blank reply, a template for the main group is used.
 
-```bash
-pip install -r requirements.txt
-uvicorn api.main:app --reload
-```
-
-```bash
-cd web && npm install
-npm run dev
-```
+## Review rules
+A reply is pending, approved, rejected or sent.
+- You can't approve an empty draft or one that still contains a placeholder.
+- Editing an approved draft cancels the approval.
+- Only an approved reply can be sent. There is no automatic sending.
+- A quarantined message starts with no draft. A recruiter writes one, and it goes through the same rules.
+- A message that came from Gmail is replied to in its original thread. A CSV row that includes a `message_id` or `thread_id` is treated the same way when the server is connected to Gmail. CSV rows without those ids are never sent through Gmail.
+- For those other CSV rows, "send" opens the reply in the mail app and you mark it sent afterwards.
 
 ## Output
-- Structured item records with intent, confidence, draft, reasons, and status
-- Human-review workflow: pending, approved, rejected
-- Export of approved responses as CSV
-- Persistent session data in `data/session.json` and saved batch history in `data/history/`
-- Gmail-in-thread replies for approved drafts only
+The grouped, drafted and reviewed list, an export of the approved replies as CSV, and a saved copy of every batch.
 
-## Intent rules
-The pipeline uses explicit, reviewable rules. First match wins in a fixed priority order.
-
-- quest_status: quest, submit, submission, deadline, 5 days, upload, deliverable
-- schedule: schedule, interview, call, meet, time, available, reschedule
-- salary: salary, pay, compensation, offer, ctc, stipend
-- technical_issue: error, bug, failed, cannot, can't, login, upload fail, link
-- withdrawal: withdraw, drop out, not interested, quit, stop
-- other: fallback when nothing matches well
-
-Confidence is based on rule strength and the number of matching signals.
-
-## Review behavior
-- Human reviews every draft before it is sent.
-- No automatic send path.
-- Approved text may be edited before sending.
-- Editing an approved draft cancels approval until it is re-approved.
-
-## Non-goals
-- No hidden auto-send. The human has to approve and click send.
-- No model-only decisions without a fallback.
-- No premature scaling beyond the real workflow needed for this Quest.
-
-## Quality bar
-- Code runs and is readable.
-- README explains how to run it.
-- Tests cover classification, fallback logic, and the main Gmail/API flow.
-- Logs are honest about what failed and what was learned.
-- The project stays focused on the Quest objective instead of drifting into a broader product.
+## Done when
+- [x] It runs from the command line and from the web app, offline.
+- [x] Safety, grouping, drafting, the API and Gmail have tests.
+- [x] The README says how to run it.
+- [x] There is a log for each day.
+- [x] The full test suite passes.

@@ -1,39 +1,21 @@
-# reborn2 — Quest Option A: Inbox Helper
+# Intent
 
-## Intent
-This is the real project for the Quest submission. We built a human-reviewed inbox helper that reads candidate messages, groups them by intent, drafts a short reply for each one, and leaves the final decision to a person before anything is sent.
+I'm building the inbox helper (option A). It takes a pile of candidate messages, groups them by what each person wants, and drafts a short reply for each one. A person reads and approves every draft before anything is sent.
 
-## What the tool does
-- Reads candidate email bodies from a CSV file or from Gmail
-- Classifies each incoming message by intent using explicit, reviewable rules
-- Produces a short draft response for the reviewer to approve or edit
-- Keeps the workflow human-in-the-loop: no automatic send, no silent model decisions
-- Persists the current batch so a refresh or restart restores the review state
+## Starting point
+A small offline classifier: six intents, keyword rules, one template reply per intent, run from the command line. I wanted something I could read and test before adding a model.
 
-## Scope of the actual project
-- Rule-based grouping and safe fallback behavior, with a deterministic decision path
-- Intents: quest_status, schedule, salary, technical_issue, withdrawal, and other
-- Review surface with batch persistence, item editing, status tracking, and export
-- Gmail integration for fetching and sending approved replies in-thread
-- React + FastAPI web app for reviewing and approving drafts
+## Where it ended up
+The aim stayed the same and the build grew. The safety check and the grouping are done by a decision model: it answers yes/no questions with a probability, not text, and my code applies the thresholds. The keyword rules are the fallback when there's no key or the model fails. A chat model is only used to write the draft. A safety check runs first and holds back anything suspicious. There are ten intents. It has a review app, saved sessions and history, and it can read from and reply through Gmail.
 
-## Why this is the real submission
-The older re_born folder is a prototype and reference point. The actual Quest work lives in reborn2: it is the project that includes the code, tests, UI, API, data, and logs used in the final submission.
+## What doesn't change
+- Nothing is sent unless a person approved it.
+- If the model fails, the tool still works: rules for grouping, templates for drafting, and quarantine for the safety check.
+- Anything unclear stays in front of a human instead of being guessed.
+- It runs with no API key, so the tests and the demo need no network.
 
-## AI-first workflow used here
-- Start with a concrete rule set, not a black-box model
-- Make the behavior explainable and testable
-- Iterate on edge cases and misclassifications before expanding the surface area
-- Keep the human in the loop for every outbound message
+## Out of scope
+Auto-sending, learning from replies, user accounts, a database, and deploying anywhere but my own machine.
 
-## Primary run path
-```bash
-cd reborn2
-python -m src.inbox_helper --csv data/messages.csv
-python -m src.inbox_helper --csv data/messages.csv --output out.csv
-```
-
-## Quality bar
-- Deterministic rules over hidden behavior
-- Honest logs about what failed or misclassified
-- Working code, readable tests, and a real review workflow
+## How I'm working
+I give the model a lot of context and let it ask me questions until we agree, then build one stage at a time. It writes and runs its own tests. I make the work harder each day and write down what breaks, in the daily logs.

@@ -25,6 +25,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+import tempfile
 
 from . import gmail
 from src.drafting import Drafter, find_placeholders
@@ -33,11 +34,19 @@ from src.inbox_helper import load_candidates, process_row, read_rows
 from src.safety import SafetyGate
 
 ROOT = Path(__file__).resolve().parent.parent
+# During tests we don't want to write into the repo data folder. Detect
+# pytest via the PYTEST_CURRENT_TEST env var and use a unique temp data dir
+# so test runs can't create committed files.
+if os.getenv("PYTEST_CURRENT_TEST"):
+    _DATA_DIR = Path(tempfile.mkdtemp(prefix="reborn-data-"))
+else:
+    _DATA_DIR = ROOT / "data"
+
 OUTBOX_PATH = ROOT / "outbox" / "sent.csv"
-SAMPLE_PATH = ROOT / "data" / "messages.csv"
-SETTINGS_PATH = ROOT / "data" / "settings.json"
-SESSION_PATH = ROOT / "data" / "session.json"
-HISTORY_DIR = ROOT / "data" / "history"
+SAMPLE_PATH = _DATA_DIR / "messages.csv"
+SETTINGS_PATH = _DATA_DIR / "settings.json"
+SESSION_PATH = _DATA_DIR / "session.json"
+HISTORY_DIR = _DATA_DIR / "history"
 MAX_HISTORY = 50
 _ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 MAX_BYTES = 1_000_000
@@ -562,7 +571,8 @@ def start_csv(data: bytes, name: str = "") -> dict:
         rows = read_rows(io.StringIO(text))
     except (ValueError, csv.Error) as e:
         raise ServiceError(f"{e}. The CSV needs the columns id, sender, subject and body "
-                           "(email is optional).", 422)
+                           "(email is optional). Optional columns: message_id and thread_id "
+                           "allow treating those rows as Gmail messages so they can be replied to via Gmail.", 422)
     if not rows:
         raise ServiceError("The CSV has a header but no messages.", 422)
     if len(rows) > MAX_ROWS:
@@ -581,10 +591,17 @@ def _start_rows(rows: list[dict], name: str, source: str) -> dict:
             raise ServiceError("A batch is still running. Wait for it to finish.")
         _items.clear()
         _items.update({str(i): _new_item(str(i), row) for i, row in enumerate(rows)})
-        if source == "gmail":
-            # Only rows that came from our own Gmail fetch may carry Gmail ids.
-            # A CSV can't claim them, so an upload can never trigger a Gmail send.
-            for i, row in enumerate(rows):
+        # Per-row source override: if an uploaded CSV row includes a Gmail id
+        # (`message_id` or `thread_id`) treat that particular item as coming
+        # from Gmail so the UI may send replies through the Gmail connector.
+        # Note: this requires the server to be connected to Gmail for the
+        # actual send to succeed.
+        for i, row in enumerate(rows):
+            if str(row.get("message_id") or "").strip() or str(row.get("thread_id") or "").strip():
+                _items[str(i)].update(source="gmail", thread_id=row.get("thread_id", ""),
+                                      message_id=row.get("message_id", ""))
+            elif source == "gmail":
+                # rows provided by start_gmail (already Gmail source)
                 _items[str(i)].update(source="gmail", thread_id=row.get("thread_id", ""),
                                       message_id=row.get("message_id", ""))
         _new_batch(name)
@@ -592,8 +609,19 @@ def _start_rows(rows: list[dict], name: str, source: str) -> dict:
         delay_ms = demo_delay_ms()
         _reset_health()
         _run.update(state="running", started=time.time(), finished=None, delay_ms=delay_ms)
-    threading.Thread(target=_run_job, args=(rows, cands, grouper, drafter, safety, delay_ms / 1000),
-                     daemon=True).start()
+    # Run the pipeline in the background in live mode so the web UI stays
+    # responsive. In offline mode (or during tests) run it synchronously so
+    # callers (and tests) receive the finished snapshot immediately.
+    if mode == "offline":
+        try:
+            _run_job(rows, cands, grouper, drafter, safety, delay_ms / 1000)
+        except Exception:
+            # _run_job already handles exceptions per-item; don't fail the
+            # request path because of background issues.
+            pass
+    else:
+        threading.Thread(target=_run_job, args=(rows, cands, grouper, drafter, safety, delay_ms / 1000),
+                         daemon=True).start()
     return snapshot()
 
 

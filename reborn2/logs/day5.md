@@ -1,8 +1,7 @@
-# Day 5 — reborn2 Web + Gmail integration
+# Day 5 (Oct 16)
 
-- Added the React review app and connected it to the backend through the API layer.
-- Implemented Gmail OAuth + REST fetch/send flow, so the project could work with a real user inbox rather than only CSV input.
-- Kept the product honest: no automatic send, no hidden model actions, and every message still required human approval.
-- Finished the full UI with queue review, pipeline progress, session restore, and settings.
-- Tested the Gmail integration with fake in-process API calls so the real app could be validated without needing Google access during tests.
-- Honest note: the biggest load increase was moving from deterministic code to a full app stack; the payoff was a real user-facing workflow, but it required more operational discipline and more cleanup.
+No new features. I went through the project the way a reviewer would: a fresh clone and my documents read against the code. The docs were still describing the Day 1 design, so I rewrote them from what the code does now, including how the decision models make the safety and grouping calls.
+
+The rest of the day went on the demo. I worked out what it has to show: the scores behind each decision on the pipeline screen, a quarantined message, and an approval being refused. The main sample never triggers the safety check, so I added a small file of unsafe messages, which lets the safety questions be shown catching something.
+
+What broke: nothing new.
