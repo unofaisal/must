@@ -1,4 +1,4 @@
-# What I Unlearned: reborn2 (Inbox Helper, Option A)
+# What I Unlearned: Reborn (Inbox Helper)
 
 The brief asked how much I would change the way I work, not how much I already know. This note is about how I used to build things and how I built this one.
 
