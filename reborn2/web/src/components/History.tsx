@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Trash2 } from "lucide-react";
-import { useActions } from "@/lib/actions";
-import { fmtDate } from "@/lib/groups";
-import { useStore } from "@/lib/store";
-import type { HistoryEntry } from "@/lib/types";
+import { useActions } from "../lib/actions";
+import { fmtDate } from "../lib/groups";
+import { useStore } from "../lib/store";
+import type { HistoryEntry } from "../lib/types";
 
 function Chip({ n, label, tone }: { n: number; label: string; tone?: "copper" | "good" }) {
   if (!n) return null;
