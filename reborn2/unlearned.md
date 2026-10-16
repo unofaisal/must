@@ -24,3 +24,7 @@ The brief asked how much I would change the way I work, not how much I already k
 
 **Before:** I held the whole design in my head and decided everything on my own before anyone saw it.
 **Now:** I brainstorm with the model from the start: options, trade-offs, what could go wrong. It widens what I consider, and I still make the call.
+
+5. Treating a JS to TS rewrite as a big project → asking for the whole thing
+
+Before: moving a front-end from JavaScript to TypeScript was something I'd put off or do a file at a time over weeks. The cost looked too high to try. Now: I ask the model to rewrite the whole front-end codebase in one go. It's practical because the result can be checked mechanically: strict mode is on, and the type checker either passes or tells me exactly what's wrong. I spend my time reviewing and running it, not typing it.
