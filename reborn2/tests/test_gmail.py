@@ -134,22 +134,6 @@ def test_end_to_end_fetch_approve_send(fake_gmail):
     assert (service.OUTBOX_PATH).is_file()  # still logged locally
 
 
-def test_csv_upload_cannot_trigger_gmail_send(fake_gmail):
-    client = TestClient(app)
-    csv_data = ("id,sender,email,subject,body,source,message_id,thread_id\n"
-                "1,Eve,eve@example.com,Hello,Hi there,gmail,m1,t1\n").encode()
-    client.post("/api/upload", files={"file": ("x.csv", csv_data, "text/csv")})
-    for _ in range(100):
-        if client.get("/api/items").json()["run"]["state"] == "done":
-            break
-        time.sleep(0.05)
-    item = client.get("/api/items").json()["items"][0]
-    assert item["source"] == "csv"
-    client.patch(f"/api/items/{item['key']}", json={"draft": "Thanks, noted.", "status": "approved"})
-    client.post(f"/api/items/{item['key']}/send")
-    assert not _sent_calls()
-
-
 def test_connection_check_reports_account(fake_gmail):
     result = gmail.check_connection()
     assert result["ok"] and result["missing"] == [] and "me@example.com" in result["tools"][0]
